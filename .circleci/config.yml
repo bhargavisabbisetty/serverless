@@ -1,0 +1,34 @@
+# Python CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-python/ for more details
+#
+version: 2
+jobs:
+  build:
+    branches:
+      only:
+        - master
+    docker:
+      - image: circleci/python:3.6.8-jessie
+
+    working_directory: ~/repo
+
+    steps:
+      - checkout
+
+      - run:
+          name: Install dependencies
+          command: sudo apt-get install python-pip zip
+
+      - run:
+          name: install awscli
+          command: sudo pip install awscli
+
+      - run:
+          name: Zip Artifact
+          command: zip index.zip index.js
+
+      - run:
+          name: Update lambdaFunction code
+          command: |
+            aws lambda update-function-code --function-name EmailService --region us-east-1 --zip-file fileb://index.zip
