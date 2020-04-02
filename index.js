@@ -8,12 +8,17 @@ exports.emailService = function(event, context, callback) {
   let messageJson = JSON.parse(message);
   let messageDataJson = JSON.parse(messageJson.data);
   console.log("Test Message: " + messageJson.data);
-  console.log("Test results: " + messageDataJson.bills[0].id);
   console.log("Test Email: " + messageDataJson.Email);
   console.log("Test due count: " + messageDataJson.count)
   let currentTime = new Date().getTime();
   let ttl = 60*60*1000;
   let expirationTime = (currentTime + ttl).toString();
+  var billsData=""
+  for(var i=0;i<messageDataJson.bills.length;i++)
+  {
+      billsData=billsData+"http://"+process.env.DOMAIN_NAME+"/v1/bill/"+messageDataJson.bills[i].id+"\n"
+  }
+  console.log("Test results: " + billsData);
   var emailParams = {
     Destination: {
       /* required */
@@ -27,7 +32,7 @@ exports.emailService = function(event, context, callback) {
       Body: {
         Text: {
           Charset: "UTF-8",
-          Data: messageDataJson.bills
+          Data: billsData
         }
       },
       Subject: {
@@ -41,7 +46,7 @@ exports.emailService = function(event, context, callback) {
     TableName: "csye6225",
     Item: {
       id: { S: messageDataJson.Email },
-      bills: { S: messageDataJson.bills[0].id },
+      bills: { S: billsData},
       ttl: { N: expirationTime }
     }
   };
@@ -59,7 +64,6 @@ exports.emailService = function(event, context, callback) {
   ddb.getItem(queryParams, (err, data) => {
     if(err) console.log(err)
     else{
-    // console.log('getItemttl: '+JSON.stringify(data, null, 2));
     console.log(data.Item)
     let jsonData = JSON.stringify(data)
     console.log(jsonData)
