@@ -8,7 +8,7 @@ exports.emailService = function(event, context, callback) {
   let messageJson = JSON.parse(message);
   let messageDataJson = JSON.parse(messageJson.data);
   console.log("Test Message: " + messageJson.data);
-  console.log("Test results: " + messageDataJson.bills);
+  console.log("Test results: " + messageDataJson.bills[0].id);
   console.log("Test Email: " + messageDataJson.Email);
   console.log("Test due count: " + messageDataJson.count)
   let currentTime = new Date().getTime();
@@ -41,7 +41,7 @@ exports.emailService = function(event, context, callback) {
     TableName: "csye6225",
     Item: {
       id: { S: messageDataJson.Email },
-      bills: { S: messageDataJson.bills },
+      bills: { S: messageDataJson.bills[0].id },
       ttl: { N: expirationTime }
     }
   };
