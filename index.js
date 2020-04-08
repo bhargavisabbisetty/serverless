@@ -6,21 +6,21 @@ var docClient = new aws.DynamoDB.DocumentClient();
 exports.emailService = function (event, context, callback) {
     let message = event.Records[0].Sns.Message;
     let messageJson = JSON.parse(message);
-    let messageDataJson = JSON.parse(messageJson.data);
+    let data = JSON.parse(messageJson.data);
     console.log("Test Message: " + messageJson.data);
-    console.log("Test Email: " + messageDataJson.Email);
-    console.log("Test due count: " + messageDataJson.count)
+    console.log("Test Email: " + data.Email);
+    console.log("Test due count: " + data.count)
     let currentTime = new Date().getTime();
     let ttl = 60 * 60 * 1000;
     let expirationTime = (currentTime + ttl).toString();
     var billsData = ""
-    if (messageDataJson.bills.length == 0) {
-        billsData = "There are no bills due within " + messageDataJson.count + " days";
+    if (data.bills.length == 0) {
+        billsData = "There are no bills due within " + data.count + " days";
     }
     else {
-        billsData = "There are the bills which are due within next " + messageDataJson.count + " days:\n\n";
-        for (var i = 0; i < messageDataJson.bills.length; i++) {
-            billsData = billsData + "http://" + process.env.DOMAIN_NAME + "/v1/bill/" + messageDataJson.bills[i].id + "\n"
+        billsData = "There are the bills which are due within next " + data.count + " days:\n\n";
+        for (var i = 0; i < data.bills.length; i++) {
+            billsData = billsData + "https://" + process.env.DOMAIN_NAME + "/v1/bill/" + data.bills[i].id + "\n"
         }
     }
     console.log("Test results: " + billsData);
@@ -28,7 +28,7 @@ exports.emailService = function (event, context, callback) {
         Destination: {
             /* required */
             ToAddresses: [
-                messageDataJson.Email
+                data.Email
                 /* more items */
             ]
         },
@@ -50,7 +50,7 @@ exports.emailService = function (event, context, callback) {
     let putParams = {
         TableName: "csye6225",
         Item: {
-            id: { S: messageDataJson.Email },
+            id: { S: data.Email },
             bills: { S: billsData },
             ttl: { N: expirationTime }
         }
@@ -58,7 +58,7 @@ exports.emailService = function (event, context, callback) {
     let queryParams = {
         TableName: 'csye6225',
         Key: {
-            'id': { S: messageDataJson.Email }
+            'id': { S: data.Email }
         },
     };
     // first get item and check if email exists
@@ -78,16 +78,7 @@ exports.emailService = function (event, context, callback) {
                 ddb.putItem(putParams, (err, data) => {
                     if (err) console.log(err);
                     else {
-                        console.log(data);
-                        console.log('sent from 1st function')
-                        var sendPromise = ses.sendEmail(emailParams).promise();
-                        sendPromise
-                            .then(function (data) {
-                                console.log(data.MessageId);
-                            })
-                            .catch(function (err) {
-                                console.error(err, err.stack);
-                            });
+                        sendEmail(emailParams,data);
                     }
                 });
             } else {
@@ -100,16 +91,7 @@ exports.emailService = function (event, context, callback) {
                     ddb.putItem(putParams, (err, data) => {
                         if (err) console.log(err);
                         else {
-                            console.log(data);
-                            console.log('sent from 1st function')
-                            var sendPromise = ses.sendEmail(emailParams).promise();
-                            sendPromise
-                                .then(function (data) {
-                                    console.log(data.MessageId);
-                                })
-                                .catch(function (err) {
-                                    console.error(err, err.stack);
-                                });
+                            sendEmail(emailParams,data);
                         }
                     });
                 }
@@ -117,3 +99,15 @@ exports.emailService = function (event, context, callback) {
         }
     });
 };
+
+function sendEmail(params,data) {
+    console.log(data);
+    var sendPromise = ses.sendEmail(params).promise();
+    sendPromise
+        .then(function (data) {
+            console.log(data.MessageId);
+        })
+        .catch(function (err) {
+            console.error(err, err.stack);
+        });
+}
